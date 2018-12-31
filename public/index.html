@@ -1,0 +1,154 @@
+<html>
+
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
+
+    </style>
+</head>
+
+<body>
+
+    <label>Enter your URL:</label>
+    <br>
+    <textarea id="text"></textarea>
+    <br>
+    <br>
+    <table border="1" id="tableid">
+
+    </table>
+    <button id="Signin" onclick="fbLogin()" style="visibility: visible">Sign in with Facebook</button>
+    <br>
+    <br>
+    <div id="log"></div>
+    <br>
+    <br>
+    <button id="urlshortening" onclick="getShortenedURL()" style="visibility: hidden">Get Shortened Url </button>
+    <br>
+    <br>
+    <div id="shorturl"></div>
+    <button id="logout" onclick="fbLogout()" style="visibility:hidden">logout</button>
+    <br>
+    <br>
+</body>
+<script>
+
+
+
+    const createdURL = () => {
+        axios.get("http://localhost:3000/createdURL").then((response) => {
+            console.log(response.data);
+            const final = response.data
+                .map(e => `
+            <tr>
+                <td>${e.id}</td>
+                <td>${e.longurl}</td>
+                <td>${e.timestamp}</td>
+                <td>${e.count}</td>
+                <td>${e.screenshot}</td>
+                
+            </tr> `)
+                .reduce((prev, curr) => prev + curr)
+            document.getElementById("tableid").innerHTML = final;
+        })
+    }
+
+    if (document.cookie.split(';').filter((item) => item.includes('token=')).length) {
+
+        console.log('The cookie "token" exists');
+
+        createdURL();
+
+        document.getElementById("log").innerHTML = "Great!!! You are connected to Facebook";
+
+
+        document.getElementById('Signin').style.visibility = 'hidden';
+        document.getElementById('logout').style.visibility = "visible";
+        document.getElementById('urlshortening').style.visibility = "visible";
+
+
+
+    }
+
+    window.fbAsyncInit = function () {
+        FB.init({
+            appId: '2055505924461754',
+            autoLogAppEvents: true,
+            xfbml: true,
+            version: 'v3.1'
+        });
+    };
+
+
+    (function (d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) { return; }
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+
+
+    fbLogin = () => {
+        FB.login(function (response) {
+            if (response.status === 'connected') {
+                // console.log(response.status);
+                // console.log(response.authResponse.accessToken);
+                axios.get("http://localhost:3000/accesstoken?token=" + response.authResponse.accessToken).then((result) => {
+                    console.log(result.data)
+                    var maxAge = "; max-age=604800";
+                    document.cookie = "token=" + result.data + maxAge;
+                    createdURL();
+                });
+
+                document.getElementById("log").innerHTML = "Great!!! You are connected to Facebook";
+
+
+                document.getElementById('Signin').style.visibility = 'hidden';
+                document.getElementById('logout').style.visibility = "visible";
+                document.getElementById('urlshortening').style.visibility = "visible";
+
+            } else {
+                // The person is not logged into this app or we are unable to tell.
+                document.getElementById("log").innerHTML = "Sorry!!!You are not connected to facebook. Please login to have a good user experience"
+
+            }
+        });
+    }
+
+
+
+    fbLogout = () => {
+        document.cookie = 'token=; max-Age=0';
+        document.getElementById("log").innerHTML = "Succesfully Logged Out!!!"
+        document.getElementById('Signin').style.visibility = 'visible';
+        document.getElementById('logout').style.visibility = 'hidden';
+        document.getElementById('urlshortening').style.visibility = 'hidden';
+        document.getElementById('shorturl').style.visibility = 'hidden';
+    }
+
+
+
+    getShortenedURL = () => {
+        var data = document.getElementById("text").value;
+        document.getElementById("text").value = null;
+
+        axios.get("http://localhost:3000/generateshorturl?url=" + data)
+            .then(response => {
+                console.log(response.data);
+                if (response.data === "invalid URL") {
+                    document.getElementById("shorturl").innerHTML = response.data;
+                }
+                else if (response.data === "No input given") {
+                    document.getElementById("shorturl").innerHTML = response.data;
+                }
+                else if (response.data === " Not authorised") {
+                    document.getElementById("shorturl").innerHTML = response.data;
+                }
+                else {
+                    document.getElementById("shorturl").innerHTML = "http://localhost:3000/" + response.data;
+
+                }
+            })
+    }
+
+</script>
